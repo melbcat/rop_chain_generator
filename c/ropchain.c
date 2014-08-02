@@ -2,10 +2,8 @@
 
 #include <stdio.h>
 #include <inttypes.h>
-
+#include <string.h>
 #include <capstone/capstone.h>
-
-#define CODE "\x55\x48\x8b\x05\xb8\x13\x00\x00"
 
 int main(void)
 {
@@ -14,15 +12,22 @@ int main(void)
 	size_t count;
 
 	FILE *fp;
-	fp = fopen("../a.out", "rb");
+	char file_name[20];
+	printf("Enter binary file name: ");
+	scanf("%s",file_name);
+	fp = fopen(file_name, "rb");
 	unsigned long fileLen;
 	char *buffer;
+
+	int gadget_len = 0;
+	char gadget_string[500];
+	unsigned int gadget_address;
+	strcpy(gadget_string,"");
 
 	//Get file length
 	fseek(fp, 0, SEEK_END);
 	fileLen=ftell(fp);
 	fseek(fp, 0, SEEK_SET);
-	printf("%ld\n",fileLen);
 
 	//Allocate memory
 	buffer = (char *)malloc(fileLen+1);
@@ -36,15 +41,38 @@ int main(void)
 	if (count > 0) {
 		size_t j;
 		for (j = 0; j < count; j++) {
-			printf("0x%"PRIx64":\t%s\t\t%s\n", insn[j].address, insn[j].mnemonic,
-					insn[j].op_str);
+			//printf("0x0%"PRIx64":\t%s\t\t%s\n", insn[j].address, insn[j].mnemonic,insn[j].op_str);
+			
+			if(gadget_len == 0){
+				gadget_address = insn[j].address;
+			}
+			if(!strcmp(insn[j].mnemonic,"ret")){
+					
+				strcat(gadget_string,"ret");
+				printf("0x0%x: %s\n",gadget_address,gadget_string);		
+				gadget_address = gadget_address + insn[j].size;
+				strcpy(gadget_string,"");
+				gadget_len = 0;
+			}
+			else{
+				gadget_len = gadget_len + 1;
+				strcat(gadget_string,insn[j].mnemonic);
+				strcat(gadget_string," ");
+				strcat(gadget_string,insn[j].op_str);
+				strcat(gadget_string," ; ");
+			}
+			if(gadget_len>10){
+				gadget_len = 0;
+				strcpy(gadget_string,"");
+			}
+			
 		}
-
 		cs_free(insn, count);
-	} else
+	} 
+	else{
 		printf("ERROR: Failed to disassemble given code!\n");
+	}
 	free(buffer);
 	cs_close(&handle);
-
-    return 0;
+	return 0;
 }
