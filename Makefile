@@ -1,8 +1,10 @@
-# capstone library name (without prefix 'lib' and suffix '.so')
 LIBNAME = capstone
 
-ropchain: ropchain.o
-	${CC} $< -O3 -Wall -l$(LIBNAME) -o $@
+ropchain: rop.o
+	${CC} $< main.c -O3 -Wall -l$(LIBNAME) -o $@
 
-%.o: %.c
+rop.o: rop.c
 	${CC} -c $< -o $@
+
+clean:
+	rm ropchain rop.o
