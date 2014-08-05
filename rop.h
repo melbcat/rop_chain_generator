@@ -8,10 +8,12 @@
 #include <string.h>
 #include <capstone/capstone.h>
 
-extern char *binary;
+struct Gadget{
+        char string[500];
+        unsigned int address;
+};
 
-unsigned long read_binary();
-int rop_findgadgets(unsigned long binary_len);
-int find_pop(char* reg, size_t count);
+int rop_findgadgets(char *binary, unsigned long binary_len);
+int rop_find(char* operate, char* operand, size_t count, cs_insn *insn, struct Gadget GADGET);
 
 #endif
