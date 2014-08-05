@@ -2,6 +2,12 @@
 
 char *binary;
 
+csh handle;
+cs_insn *insn;
+
+char gadget_string[500];
+unsigned int gadget_address;
+
 unsigned long read_binary()
 {
 	FILE *fp;
@@ -28,45 +34,16 @@ unsigned long read_binary()
 int rop_findgadgets(unsigned long binary_len)
 {
 
-	csh handle;
-	cs_insn *insn;
 	size_t count;
 
-	int gadget_len = 0;
-	char gadget_string[500];
-	unsigned int gadget_address;
 	strcpy(gadget_string,"");
 
 	if (cs_open(CS_ARCH_X86, CS_MODE_32, &handle) != CS_ERR_OK)
 		return -1;
 	count = cs_disasm_ex(handle, binary, binary_len, 0x08048000, 0, &insn);
 	if (count > 0) {
-		size_t j;
-		for (j = 0; j < count; j++) {
-			//printf("0x0%"PRIx64":\t%s\t\t%s\n", insn[j].address, insn[j].mnemonic,insn[j].op_str);
-			if(gadget_len == 0){
-				gadget_address = insn[j].address;
-			}
-			if(!strcmp(insn[j].mnemonic,"ret")){
-					
-				strcat(gadget_string,"ret");
-				printf("0x0%x: %s\n",gadget_address,gadget_string);		
-				gadget_address = gadget_address + insn[j].size;
-				strcpy(gadget_string,"");
-				gadget_len = 0;
-			}
-			else{
-				gadget_len = gadget_len + 1;
-				strcat(gadget_string,insn[j].mnemonic);
-				strcat(gadget_string," ");
-				strcat(gadget_string,insn[j].op_str);
-				strcat(gadget_string," ; ");
-			}
-			if(gadget_len>4){
-				gadget_len = 0;
-				strcpy(gadget_string,"");
-			}
-		}
+		find_pop("ebp",count);
+		//printf(" count = %d\n",count);
 		cs_free(insn, count);
 	} 
 	else{
@@ -74,4 +51,26 @@ int rop_findgadgets(unsigned long binary_len)
 	}
 	cs_close(&handle);
 	return 0;
+}
+
+int find_pop(char* reg, size_t count)
+{
+	size_t j;
+	for (j = 0; j < count; j++) {
+		//printf("0x0%"PRIx64":\t%s\t\t%s\n", insn[j].address, insn[j].mnemonic,insn[j].op_str);
+		if(!strcmp(insn[j].mnemonic,"ret") && !strcmp(insn[j-1].mnemonic,"pop") && !strcmp(insn[j-1].op_str,reg))
+		{
+			strcat(gadget_string,insn[j-1].mnemonic);
+			strcat(gadget_string," ");
+			strcat(gadget_string,insn[j-1].op_str);
+			strcat(gadget_string," ; ");
+			gadget_address = insn[j-1].address;
+			strcat(gadget_string,"ret");
+			printf("0x0%x: %s\n",gadget_address,gadget_string);
+			strcpy(gadget_string,"");
+			return 0;		
+		}
+	}
+	printf("Can't find 'pop %s; ret'\n",reg);
+	return -1;
 }

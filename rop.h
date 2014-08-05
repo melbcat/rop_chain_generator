@@ -12,5 +12,6 @@ extern char *binary;
 
 unsigned long read_binary();
 int rop_findgadgets(unsigned long binary_len);
+int find_pop(char* reg, size_t count);
 
 #endif
